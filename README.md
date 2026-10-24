@@ -2,7 +2,9 @@
 
 A price time priority limit order book matching engine in Java, with five order types, O(1) cancels, and a differential test suite that checks every event against a reference implementation.
 
-## Features
+Matching engines sit at the centre of every exchange, and I wanted to build one properly: correct first, then fast. The part I trust most isn't the benchmark, it's the differential test that replays random order flow against a simple, obviously correct reference book.
+
+## What's in it
 
 **Order types**
 
@@ -33,12 +35,12 @@ PriceLevel  (FIFO queue at one price)
  totalQuantity, orderCount
 ```
 
-* **Integer prices and quantities.** Prices are in ticks and quantities in lots, so matching never touches floating point.
-* **O(log L) to add at a new price level, O(1) to join an existing level.** L is the number of price levels on that side.
-* **O(1) cancel.** Each order is a node in its level's linked list and is indexed by id, so cancelling unlinks it directly without scanning the queue.
-* **Trades execute at the resting (maker) price.** Walking the opposite side stops at the first level that no longer crosses.
-* **FOK checks liquidity before touching the book.** A failed fill or kill leaves the book exactly as it was.
-* **Single threaded core.** Like most exchange matching engines, the book expects commands to be serialised onto one thread, which keeps matching deterministic and lock free.
+* Integer prices and quantities. Prices are in ticks and quantities in lots, so matching never touches floating point.
+* O(log L) to add at a new price level, O(1) to join an existing level. L is the number of price levels on that side.
+* O(1) cancel. Each order is a node in its level's linked list and is indexed by id, so cancelling unlinks it directly without scanning the queue.
+* Trades execute at the resting (maker) price. Walking the opposite side stops at the first level that no longer crosses.
+* FOK checks liquidity before touching the book. A failed fill or kill leaves the book exactly as it was.
+* Single threaded core. Like most exchange matching engines, the book expects commands to be serialised onto one thread, which keeps matching deterministic and lock free.
 
 ## Testing
 
@@ -46,8 +48,8 @@ PriceLevel  (FIFO queue at one price)
 mvn test
 ```
 
-* **`OrderBookTest`**: 27 scenario tests covering price time priority, partial fills, level sweeps, every order type, cancels from the middle of a queue, modify priority rules and input validation.
-* **`DifferentialTest`**: runs 200 random command streams of 2,000 commands each through both the real book and `ReferenceOrderBook`, a deliberately naive implementation that linear scans a flat list. The streams mix every order type with invalid input, duplicate ids, and cancels and modifies on live, filled and unknown orders. After every single command, both books must have emitted an identical event log, and their final depth must match. A planted priority bug is caught within the first two seeds.
+* `OrderBookTest`: 27 scenario tests covering price time priority, partial fills, level sweeps, every order type, cancels from the middle of a queue, modify priority rules and input validation.
+* `DifferentialTest`: runs 200 random command streams of 2,000 commands each through both the real book and `ReferenceOrderBook`, a deliberately naive implementation that linear scans a flat list. The streams mix every order type with invalid input, duplicate ids, and cancels and modifies on live, filled and unknown orders. After every single command, both books must have emitted an identical event log, and their final depth must match. A planted priority bug is caught within the first two seeds.
 
 ## Benchmark
 
@@ -69,10 +71,14 @@ Latency per command: p50 125 ns, p99 438 ns, p99.9 729 ns
 
 The maximum single command latency is dominated by occasional GC pauses. These would be the next thing to remove, by pooling `Order` and `Trade` objects.
 
-## Possible extensions
+## What I'd add next
 
 * Object pooling and primitive collections to cut allocation and GC pauses
 * Self trade prevention
 * Stop and iceberg orders
 * A binary protocol gateway feeding the book through a ring buffer
 * JMH microbenchmarks per operation
+
+---
+
+If something here is unclear, broken, or just wrong, feel free to open an issue. I'm always happy to chat about it.

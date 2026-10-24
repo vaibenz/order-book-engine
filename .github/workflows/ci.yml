@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run tests
+        run: mvn -B test
+      - name: Benchmark smoke run
+        run: |
+          mvn -B -q package -DskipTests
+          java -Xms1g -Xmx1g -jar target/order-book-engine-1.0.0.jar 500000 42
